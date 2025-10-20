@@ -236,7 +236,7 @@
 													referrerpolicy="no-referrer-when-downgrade"></iframe>
 											</div>
 											<p>Statistik penempatan peserta magang LPK Asta Karya di berbagai prefektur Jepang.</p>
-											<div class="placement-grid">
+											<div class="placement-grid" id="placement-grid">
 												<div class="placement-item">
 													<span class="placement-name">Hyogo</span>
 													<span class="placement-count">298</span>
@@ -312,7 +312,7 @@
 											</div>
 											<div class="placement-total">
 												<span>Akumulasi Total</span>
-												<span class="placement-count">545</span>
+												<span class="placement-count" id="placement-total-count">545</span>
 											</div>
 										</div>
 										<hr />
@@ -364,6 +364,79 @@
 			<script src="assets/js/breakpoints.min.js"></script>
 			<script src="assets/js/util.js"></script>
 			<script src="assets/js/main.js"></script>
+			<script>
+				(async function loadPlacementData() {
+					const gridElement = document.getElementById('placement-grid');
+					const totalElement = document.getElementById('placement-total-count');
+					if (!gridElement || !totalElement) {
+						return;
+					}
+
+					const originalMarkup = gridElement.innerHTML;
+					const originalTotal = totalElement.textContent;
+
+					try {
+						const response = await fetch('https://sheets.googleapis.com/v4/spreadsheets/1V8c2Zx4j8Lf6XgD4g3eskE-QCw3e5S8qPaBIJrsYlPY/values/Sheet1!A2:B20?key=AIzaSyBof-SD7PX06Fpx_uZbZhpI5w4S8iAXqm4');
+						if (!response.ok) {
+							throw new Error('HTTP error ' + response.status);
+						}
+
+						const payload = await response.json();
+						const rows = Array.isArray(payload.values) ? payload.values : [];
+
+						gridElement.innerHTML = '';
+						let entriesAdded = 0;
+						let totalUpdated = false;
+
+						rows.forEach(function (row) {
+							const name = row[0];
+							const count = row[1];
+
+							if (!name) {
+								return;
+							}
+
+							if (typeof name === 'string' && name.toLowerCase().includes('total')) {
+								if (count) {
+									totalElement.textContent = count;
+								}
+								totalUpdated = true;
+								return;
+							}
+
+							const itemElement = document.createElement('div');
+							itemElement.className = 'placement-item';
+
+							const nameElement = document.createElement('span');
+							nameElement.className = 'placement-name';
+							nameElement.textContent = name;
+
+							const countElement = document.createElement('span');
+							countElement.className = 'placement-count';
+							countElement.textContent = count || '0';
+
+							itemElement.appendChild(nameElement);
+							itemElement.appendChild(countElement);
+							gridElement.appendChild(itemElement);
+							entriesAdded += 1;
+						});
+
+						if (!entriesAdded) {
+							gridElement.innerHTML = originalMarkup;
+						}
+
+						if (!totalUpdated) {
+							totalElement.textContent = originalTotal;
+						}
+					} catch (error) {
+						console.error('Failed to load placement data', error);
+						if (!gridElement.childElementCount) {
+							gridElement.innerHTML = originalMarkup;
+							totalElement.textContent = originalTotal;
+						}
+					}
+				}());
+			</script>
 
 	</body>
 </html>
